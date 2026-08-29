@@ -1,0 +1,8 @@
+Document 33
+Topic: PostgreSQL Indexes
+
+B-tree indexes are useful for equality and range predicates. Indexes improve reads but add storage and write overhead, so they should be created for useful access patterns.
+
+Prototype reference:
+This document is synthetic sample content created for demonstrating document ingestion,
+chunking, embeddings, PostgreSQL pgvector retrieval, and Groq-powered RAG.

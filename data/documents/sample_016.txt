@@ -1,0 +1,8 @@
+Document 16
+Topic: AWS EC2
+
+Amazon EC2 provides resizable compute capacity. An EC2 instance is selected using CPU, memory, storage, network, and workload requirements.
+
+Prototype reference:
+This document is synthetic sample content created for demonstrating document ingestion,
+chunking, embeddings, PostgreSQL pgvector retrieval, and Groq-powered RAG.

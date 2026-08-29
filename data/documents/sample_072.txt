@@ -1,0 +1,8 @@
+Document 72
+Topic: PostgreSQL Vacuum
+
+VACUUM removes obsolete row versions and helps PostgreSQL control table bloat. ANALYZE updates planner statistics so the optimizer can make better decisions.
+
+Prototype reference:
+This document is synthetic sample content created for demonstrating document ingestion,
+chunking, embeddings, PostgreSQL pgvector retrieval, and Groq-powered RAG.

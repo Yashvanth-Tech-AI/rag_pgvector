@@ -1,0 +1,8 @@
+Document 20
+Topic: RAG Architecture
+
+Retrieval-Augmented Generation combines information retrieval with language generation. A retriever finds relevant knowledge and an LLM uses that knowledge to produce a grounded answer.
+
+Prototype reference:
+This document is synthetic sample content created for demonstrating document ingestion,
+chunking, embeddings, PostgreSQL pgvector retrieval, and Groq-powered RAG.

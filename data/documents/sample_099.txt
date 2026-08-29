@@ -1,0 +1,8 @@
+Document 99
+Topic: AWS CloudWatch
+
+Amazon CloudWatch collects metrics, logs, and alarms for AWS resources and applications. It can be used to monitor CPU utilization, storage, latency, and application events.
+
+Prototype reference:
+This document is synthetic sample content created for demonstrating document ingestion,
+chunking, embeddings, PostgreSQL pgvector retrieval, and Groq-powered RAG.

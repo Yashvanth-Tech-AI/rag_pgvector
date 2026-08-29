@@ -1,0 +1,8 @@
+Document 77
+Topic: AWS S3
+
+Amazon S3 is object storage designed for durable storage of files and objects. Applications commonly use S3 for backups, data lakes, logs, and static assets.
+
+Prototype reference:
+This document is synthetic sample content created for demonstrating document ingestion,
+chunking, embeddings, PostgreSQL pgvector retrieval, and Groq-powered RAG.

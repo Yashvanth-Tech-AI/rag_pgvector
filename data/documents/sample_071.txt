@@ -1,0 +1,8 @@
+Document 71
+Topic: PostgreSQL Backup
+
+PostgreSQL backups protect database data and support recovery after failures. A backup strategy commonly combines logical or physical backups with WAL archiving.
+
+Prototype reference:
+This document is synthetic sample content created for demonstrating document ingestion,
+chunking, embeddings, PostgreSQL pgvector retrieval, and Groq-powered RAG.

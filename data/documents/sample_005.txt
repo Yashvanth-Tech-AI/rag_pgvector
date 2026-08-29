@@ -1,0 +1,8 @@
+Document 5
+Topic: PostgreSQL Connection Pooling
+
+Connection pooling reuses database connections and can reduce connection setup overhead. Pool sizes should be chosen carefully because every active PostgreSQL connection consumes resources.
+
+Prototype reference:
+This document is synthetic sample content created for demonstrating document ingestion,
+chunking, embeddings, PostgreSQL pgvector retrieval, and Groq-powered RAG.

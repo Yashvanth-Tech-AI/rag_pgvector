@@ -1,0 +1,8 @@
+Document 4
+Topic: PostgreSQL Replication
+
+Streaming replication continuously sends WAL records from a primary PostgreSQL server to a standby. Replication supports high availability and read scaling.
+
+Prototype reference:
+This document is synthetic sample content created for demonstrating document ingestion,
+chunking, embeddings, PostgreSQL pgvector retrieval, and Groq-powered RAG.

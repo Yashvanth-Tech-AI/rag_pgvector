@@ -1,0 +1,8 @@
+Document 68
+Topic: AWS RDS
+
+Amazon RDS is a managed relational database service. It automates several operational tasks such as backups, patching, and infrastructure provisioning.
+
+Prototype reference:
+This document is synthetic sample content created for demonstrating document ingestion,
+chunking, embeddings, PostgreSQL pgvector retrieval, and Groq-powered RAG.
