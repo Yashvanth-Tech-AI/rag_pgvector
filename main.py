@@ -1,4 +1,4 @@
-"""Streamlit Web UI & CLI for the PostgreSQL 16 + pgvector + Groq RAG Prototype."""
+"""Streamlit Web UI & CLI for pgvector-rag-engine (PostgreSQL 16 + pgvector + Groq)."""
 
 import os
 import sys
@@ -91,7 +91,7 @@ def get_db_stats() -> dict:
 def run_streamlit_app():
     """Render the Streamlit RAG Dashboard."""
     st.set_page_config(
-        page_title="RAG Prototype | PostgreSQL pgvector + Groq",
+        page_title="pgvector-rag-engine | PostgreSQL pgvector + Groq",
         page_icon="⚡",
         layout="wide",
         initial_sidebar_state="expanded",
@@ -174,7 +174,7 @@ def run_streamlit_app():
         )
 
         st.divider()
-        st.caption("RAG Prototype | Built with PostgreSQL 16, pgvector & Groq")
+        st.caption("pgvector-rag-engine | Built with PostgreSQL 16, pgvector & Groq")
 
     # Main Tabs
     tab_chat, tab_ingest, tab_explorer = st.tabs([

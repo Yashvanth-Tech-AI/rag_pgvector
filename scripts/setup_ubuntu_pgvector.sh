@@ -4,7 +4,7 @@ set -euo pipefail
 # Ubuntu setup for PostgreSQL 16 + pgvector.
 # This script assumes Ubuntu and sudo access.
 
-echo "=== RAG Prototype: PostgreSQL 16 + pgvector setup ==="
+echo "=== pgvector-rag-engine: PostgreSQL 16 + pgvector setup ==="
 
 if ! command -v lsb_release >/dev/null 2>&1; then
     sudo apt-get update

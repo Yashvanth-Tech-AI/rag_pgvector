@@ -1,6 +1,6 @@
 # PowerShell Bootstrap Script for Windows
 
-Write-Host "=== RAG Prototype Bootstrap (Windows PowerShell) ===" -ForegroundColor Green
+Write-Host "=== pgvector-rag-engine Bootstrap (Windows PowerShell) ===" -ForegroundColor Green
 
 if (-not (Test-Path ".env")) {
     Copy-Item .env.example .env

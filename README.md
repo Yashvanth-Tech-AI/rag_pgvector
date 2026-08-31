@@ -1,4 +1,4 @@
-# RAG Prototype: PostgreSQL 16 + pgvector + Groq
+# pgvector-rag-engine: High-Performance RAG Engine
 
 A complete, end-to-end RAG (Retrieval-Augmented Generation) application built with:
 
@@ -168,7 +168,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 Now switch to your local **Windows machine** and open **VS Code**. All commands below are run in the **VS Code Built-in PowerShell Terminal** (`Ctrl + ~`).
 
 ### Step 3.1: Open VS Code Terminal & Set Execution Policy
-Open your project folder in VS Code (`File > Open Folder... > rag_pgvector_groq`).  
+Open your project folder in VS Code (`File > Open Folder... > pgvector-rag-engine`).  
 Open the terminal (`Terminal > New Terminal` or `Ctrl + ~`).
 
 If script execution is blocked on Windows, allow script execution for the current session:
@@ -303,7 +303,7 @@ streamlit run main.py
 # Project Structure
 
 ```text
-rag_pgvector_groq/
+pgvector-rag-engine/
 ├── app/
 │   ├── config.py             # Loads environment variables from .env
 │   ├── database.py           # PostgreSQL connection pool (psycopg2)

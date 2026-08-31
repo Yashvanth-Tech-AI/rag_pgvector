@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Complete application bootstrap after PostgreSQL 16 + pgvector are installed.
 
-echo "=== RAG Prototype bootstrap ==="
+echo "=== pgvector-rag-engine bootstrap ==="
 
 if [[ ! -f ".env" ]]; then
     cp .env.example .env
