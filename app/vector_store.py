@@ -68,6 +68,9 @@ class VectorStore:
                 ),
             ).fetchone()
 
+            if not document:
+                raise RuntimeError("Failed to retrieve document_id after insert.")
+
             document_id = document["document_id"]
 
             for index, (chunk, embedding) in enumerate(

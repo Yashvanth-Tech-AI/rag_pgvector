@@ -13,6 +13,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 # Try importing Streamlit
 try:
+    # pyrefly: ignore [missing-import]
     import streamlit as st
     HAS_STREAMLIT = True
 except ImportError:
@@ -32,7 +33,7 @@ from app.text_splitter import split_text
 # ==============================================================================
 # Pipeline Builder (Cached for Performance)
 # ==============================================================================
-def get_pipeline(top_k: int = 5, model_name: str = None) -> RAGPipeline:
+def get_pipeline(top_k: int = 5, model_name: str | None = None) -> RAGPipeline:
     """Create and wire all RAG pipeline components together."""
     settings = get_settings()
     db_url = settings.database_url
@@ -62,14 +63,23 @@ def get_db_stats() -> dict:
         with database.connect() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT COUNT(*) FROM documents;")
-                doc_count = cur.fetchone()["count"] if isinstance(cur.fetchone, dict) else cur.fetchone()
-                # Run count queries safely
-                cur.execute("SELECT COUNT(*) FROM documents;")
                 doc_row = cur.fetchone()
-                doc_count = list(doc_row.values())[0] if isinstance(doc_row, dict) else doc_row[0]
+                if doc_row is None:
+                    doc_count = 0
+                elif isinstance(doc_row, dict):
+                    doc_count = list(doc_row.values())[0]
+                else:
+                    doc_count = doc_row[0]
+
                 cur.execute("SELECT COUNT(*) FROM document_chunks;")
                 chunk_row = cur.fetchone()
-                chunk_count = list(chunk_row.values())[0] if isinstance(chunk_row, dict) else chunk_row[0]
+                if chunk_row is None:
+                    chunk_count = 0
+                elif isinstance(chunk_row, dict):
+                    chunk_count = list(chunk_row.values())[0]
+                else:
+                    chunk_count = chunk_row[0]
+
         return {"status": "Connected", "documents": doc_count, "chunks": chunk_count, "error": None}
     except Exception as e:
         return {"status": "Error", "documents": 0, "chunks": 0, "error": str(e)}
@@ -463,6 +473,7 @@ if __name__ == "__main__":
     elif HAS_STREAMLIT:
         # Check if already running inside Streamlit
         try:
+            # pyrefly: ignore [missing-import]
             from streamlit.runtime.scriptrunner import get_script_run_ctx
             ctx = get_script_run_ctx()
             if ctx is not None:

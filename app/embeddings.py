@@ -1,5 +1,6 @@
 """Local embedding generation using Sentence Transformers."""
 
+# pyrefly: ignore [missing-import]
 from sentence_transformers import SentenceTransformer
 
 
@@ -33,4 +34,7 @@ class EmbeddingService:
 
     def dimension(self) -> int:
         """Return the embedding dimension expected by pgvector."""
-        return self.model.get_sentence_embedding_dimension()
+        dim = self.model.get_embedding_dimension()
+        if dim is None:
+            raise ValueError(f"Could not determine embedding dimension for model '{self.model_name}'")
+        return dim

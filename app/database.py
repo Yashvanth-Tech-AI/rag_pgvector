@@ -1,7 +1,11 @@
 """PostgreSQL connection and schema management."""
 
+from typing import cast
+
+# pyrefly: ignore [missing-import]
 import psycopg
-from psycopg.rows import dict_row
+# pyrefly: ignore [missing-import]
+from psycopg.rows import DictRow, dict_row
 
 
 class Database:
@@ -10,9 +14,12 @@ class Database:
     def __init__(self, database_url: str):
         self.database_url = database_url
 
-    def connect(self):
+    def connect(self) -> psycopg.Connection[DictRow]:
         """Open a PostgreSQL connection that returns rows as dictionaries."""
-        return psycopg.connect(self.database_url, row_factory=dict_row)
+        return cast(
+            psycopg.Connection[DictRow],
+            psycopg.connect(self.database_url, row_factory=dict_row),
+        )
 
     def initialize(self) -> None:
         """Enable pgvector and create the RAG tables."""

@@ -1,6 +1,7 @@
 """Thin wrapper around the Groq Python SDK."""
 
 import re
+# pyrefly: ignore [missing-import]
 from groq import Groq, AuthenticationError, GroqError
 
 

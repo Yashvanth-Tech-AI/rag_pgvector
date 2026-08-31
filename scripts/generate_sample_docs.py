@@ -22,9 +22,12 @@ topics = [
     ("RAG Architecture", "Retrieval-Augmented Generation combines information retrieval with language generation. A retriever finds relevant knowledge and an LLM uses that knowledge to produce a grounded answer."),
 ]
 
-for i in range(1, 101):
-    topic, text = topics[(i - 1) % len(topics)]
-    content = f"""Document {i}
+def main() -> None:
+    """Generate 100 sample documents in data/documents/."""
+    OUTPUT.mkdir(parents=True, exist_ok=True)
+    for i in range(1, 101):
+        topic, text = topics[(i - 1) % len(topics)]
+        content = f"""Document {i}
 Topic: {topic}
 
 {text}
@@ -33,6 +36,11 @@ Prototype reference:
 This document is synthetic sample content created for demonstrating document ingestion,
 chunking, embeddings, PostgreSQL pgvector retrieval, and Groq-powered RAG.
 """
-    (OUTPUT / f"sample_{i:03d}.txt").write_text(content, encoding="utf-8")
+        (OUTPUT / f"sample_{i:03d}.txt").write_text(content, encoding="utf-8")
 
-print("Generated 100 sample documents in data/documents/")
+    print("Generated 100 sample documents in data/documents/")
+
+
+if __name__ == "__main__":
+    main()
+
