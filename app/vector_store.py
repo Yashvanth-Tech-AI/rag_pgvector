@@ -23,6 +23,16 @@ class VectorStore:
     def __init__(self, database: Database):
         self.database = database
 
+    def is_document_exists(self, filename: str, content: str) -> bool:
+        """Check if a document with the same filename or content hash already exists in PostgreSQL."""
+        digest = content_hash(content)
+        with self.database.connect() as conn:
+            existing = conn.execute(
+                "SELECT document_id FROM documents WHERE content_hash = %s OR filename = %s",
+                (digest, filename),
+            ).fetchone()
+            return existing is not None
+
     def add_document(
         self,
         filename: str,

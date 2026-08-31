@@ -33,7 +33,7 @@ def get_settings() -> Settings:
     return Settings(
         database_url=database_url,
         groq_api_key=groq_api_key,
-        llm_model=os.getenv("LLM_MODEL", "llama-3.3-70b-versatile"),
+        llm_model=os.getenv("LLM_MODEL", "qwen/qwen3.6-27b"),
         embedding_model=os.getenv(
             "EMBEDDING_MODEL",
             "sentence-transformers/all-MiniLM-L6-v2",

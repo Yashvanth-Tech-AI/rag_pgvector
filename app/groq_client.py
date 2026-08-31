@@ -1,5 +1,6 @@
 """Thin wrapper around the Groq Python SDK."""
 
+import re
 from groq import Groq, AuthenticationError, GroqError
 
 
@@ -21,7 +22,10 @@ class GroqLLM:
                     {"role": "user", "content": user_prompt},
                 ],
             )
-            return response.choices[0].message.content or ""
+            raw_text = response.choices[0].message.content or ""
+            # Strip internal <think>...</think> reasoning tags if present
+            cleaned_text = re.sub(r'<think>.*?</think>', '', raw_text, flags=re.DOTALL).strip()
+            return cleaned_text
         except AuthenticationError:
             return (
                 "[ERROR] Groq API authentication failed.\n"

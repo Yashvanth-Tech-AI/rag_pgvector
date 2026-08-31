@@ -1,0 +1,11 @@
+[server]
+headless = true
+fileWatcherType = "none"
+maxUploadSize = 200
+
+[theme]
+primaryColor = "#00C9FF"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#1A1D24"
+textColor = "#FAFAFA"
+font = "sans serif"

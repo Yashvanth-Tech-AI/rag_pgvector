@@ -5,7 +5,8 @@ from pathlib import Path
 
 # Ensure project root is in sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.config import get_settings
 from app.database import Database
@@ -31,13 +32,18 @@ def ingest_directory(directory: Path) -> None:
     print(f"Found {len(files)} supported documents.")
 
     for path in files:
-        print(f"\nProcessing: {path}")
+        print(f"\nProcessing: {path.name}")
 
         raw_text = load_document(path)
         text = clean_text(raw_text)
 
         if not text:
             print("  Skipped: document contains no extractable text.")
+            continue
+
+        # Fast duplicate check before embedding
+        if store.is_document_exists(path.name, text):
+            print("  Skipped: duplicate document already exists in PostgreSQL.")
             continue
 
         chunks = split_text(

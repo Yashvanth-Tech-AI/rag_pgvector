@@ -1,283 +1,273 @@
 # RAG Prototype: PostgreSQL 16 + pgvector + Groq
 
-A small, understandable RAG application built with:
+A complete, end-to-end RAG (Retrieval-Augmented Generation) application built with:
 
-- Ubuntu
-- PostgreSQL 16
-- pgvector
-- Python
-- Sentence Transformers
-- Groq
-- Llama 3.3 70B
+- **PostgreSQL 16 + pgvector** (Hosted on AWS EC2 Ubuntu Server)
+- **Local Client**: VS Code on Windows (PowerShell)
+- **Python 3.10+**
+- **Sentence Transformers** (`all-MiniLM-L6-v2`)
+- **Groq API** (`llama-3.3-70b-versatile`)
 
-This is intentionally a **prototype**, not an enterprise production platform.
+---
 
-> [!NOTE]
-> **Windows Users**: If you are using Windows and VS Code, please refer to [WINDOWS_GUIDE.md](WINDOWS_GUIDE.md) for full setup instructions (Docker Desktop / PowerShell / WSL2).
-
-## Architecture
+## Architecture Diagram
 
 ```text
-Documents
+Documents (data/documents/)
    |
    v
-Text Extraction
+Text Extraction & Cleaning
    |
    v
-Text Cleaning
+Chunking (800 chars / 120 overlap)
    |
    v
-Chunking
+Local Embedding Model (all-MiniLM-L6-v2 -> 384 dimensions)
    |
    v
-Local Embedding Model
+PostgreSQL 16 + pgvector (AWS EC2 Server)
    |
+   |  <--- Remote Connection over Port 5432
    v
-PostgreSQL 16 + pgvector
-   |
-   |
-   v
-User Question
+User Question (VS Code Terminal)
    |
    v
 Query Embedding
    |
    v
-pgvector Cosine Similarity Search
+pgvector Cosine Similarity Search (<=>)
    |
    v
-Top-K Chunks
+Top-K Context Chunks
    |
    v
-Grounded Prompt
+Grounded Prompt Construction
    |
    v
-Groq / Llama
+Groq API (Llama 3.3 70B)
    |
    v
-Answer + Sources
+Generated Answer + Source References
 ```
 
-# 1. Ubuntu prerequisites
+---
 
-The project expects PostgreSQL 16.
+# Part 1: Setup PostgreSQL 16 + pgvector on AWS EC2 Server
 
-Verify:
+SSH into your Ubuntu EC2 instance and run the following commands to install PostgreSQL 16 and the `pgvector` extension.
 
-```bash
-psql --version
-```
-
-You should see PostgreSQL 16.x.
-
-You also need:
-
+### Step 1.1: Install PostgreSQL 16 and Prerequisites
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip git curl ca-certificates
+sudo apt install -y python3 python3-pip git curl ca-certificates postgresql postgresql-contrib
 ```
 
-# 2. Install PostgreSQL 16 + pgvector
-
-The project now includes the installation script:
+### Step 1.2: Install pgvector Extension
+Choose one of the following methods to install `pgvector`:
 
 ```bash
+# Option A: Automated script
 chmod +x scripts/setup_ubuntu_pgvector.sh
-```
-
-Run:
-
-```bash
 ./scripts/setup_ubuntu_pgvector.sh
+
+# Option B: Direct APT installation
+sudo apt install -y postgresql-16-pgvector
+
+# Option C: Build and install from GitHub source repository
+sudo apt install -y build-essential postgresql-server-dev-16
+cd /tmp
+git clone https://github.com/pgvector/pgvector.git
+cd pgvector
+make
+sudo make install
 ```
 
-The script:
+---
 
-1. Checks that PostgreSQL 16 is installed.
-2. Configures the PostgreSQL APT repository helper when required.
-3. Installs the PostgreSQL-16-specific pgvector package.
-4. Restarts PostgreSQL.
-5. Verifies that `vector.control` exists.
-6. Executes `CREATE EXTENSION vector`.
-7. Displays the installed pgvector version.
+# Part 2: Configure EC2 PostgreSQL Server for Remote Connections
 
-The pgvector project documents the Ubuntu/Debian package as:
+Perform these steps on your **AWS EC2 Ubuntu Server** *after* `pgvector` is installed, so that your local **Windows VS Code** environment can connect remotely.
+
+### Step 2.1: Configure AWS Security Group (AWS Management Console)
+1. Log in to the **AWS Console** and navigate to **EC2 > Instances > Security Groups**.
+2. Select the Security Group attached to your EC2 instance.
+3. Under **Inbound Rules**, click **Edit inbound rules**.
+4. Add the following rule:
+   - **Type**: `PostgreSQL` (or `Custom TCP`)
+   - **Port Range**: `5432`
+   - **Source**: `My IP` (Recommended for security) or `0.0.0.0/0` (Allows remote connections from any IP).
+5. Click **Save rules**.
+
+### Step 2.2: Update `postgresql.conf` to Listen on All Interfaces
+Edit the main PostgreSQL configuration file on EC2:
 
 ```bash
-sudo apt install postgresql-16-pgvector
+sudo nano /etc/postgresql/16/main/postgresql.conf
 ```
 
-and distinguishes installation of the extension files from enabling the extension inside a database.
+Find the `listen_addresses` line (around line 60) and update it from `'localhost'` to `'*'`:
+```ini
+listen_addresses = '*'
+```
+*Save and exit (`Ctrl+O`, `Enter`, `Ctrl+X`).*
 
-# 3. Create the RAG database and user
+### Step 2.3: Configure Remote Authentication in `pg_hba.conf`
+Edit the PostgreSQL Host-Based Authentication configuration file:
 
-Run:
+```bash
+sudo nano /etc/postgresql/16/main/pg_hba.conf
+```
+
+Scroll to the bottom of the file and add the following entry to allow remote access for `rag_user`:
+```text
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+host    ragdb           rag_user        0.0.0.0/0               scram-sha-256
+```
+*(Note: If using md5 authentication, replace `scram-sha-256` with `md5`).*
+
+### Step 2.4: Allow Firewall Port & Restart PostgreSQL
+Allow port 5432 through the Ubuntu UFW firewall and restart the PostgreSQL service:
+
+```bash
+sudo ufw allow 5432/tcp
+sudo systemctl restart postgresql
+```
+
+### Step 2.5: Create Database, User, and Vector Extension on EC2
+Log in to PostgreSQL as `postgres` superuser on EC2:
 
 ```bash
 sudo -u postgres psql
 ```
 
-Then:
-
+Run the following SQL statements:
 ```sql
+-- Create dedicated application user
 CREATE USER rag_user WITH PASSWORD 'rag_password';
+
+-- Create database owned by rag_user
 CREATE DATABASE ragdb OWNER rag_user;
+
+-- Connect to ragdb database
 \c ragdb
+
+-- Enable vector extension
 CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Verify vector extension installation
+\dx
+
+-- Exit psql
 \q
 ```
 
-Verify:
+---
 
-```bash
-psql -U rag_user -d ragdb -h localhost \
-  -c "SELECT extname, extversion FROM pg_extension WHERE extname = 'vector';"
+# Part 3: Run Complete Application from Windows VS Code
+
+Now switch to your local **Windows machine** and open **VS Code**. All commands below are run in the **VS Code Built-in PowerShell Terminal** (`Ctrl + ~`).
+
+### Step 3.1: Open VS Code Terminal & Set Execution Policy
+Open your project folder in VS Code (`File > Open Folder... > rag_pgvector_groq`).  
+Open the terminal (`Terminal > New Terminal` or `Ctrl + ~`).
+
+If script execution is blocked on Windows, allow script execution for the current session:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
 ```
 
-# 4. Configure Python
+---
 
-From the project root:
+### Step 3.2: Set Up Python Virtual Environment & Install Dependencies
 
-```bash
-./scripts/bootstrap.sh
+**Option A: Automated Setup (Recommended)**
+```powershell
+.\scripts\bootstrap.ps1
 ```
 
-This creates:
+**Option B: Manual Setup**
+```powershell
+# 1. Create Python virtual environment
+python -m venv .venv
 
-```text
-.venv/
-.env
+# 2. Activate virtual environment in PowerShell
+.\.venv\Scripts\Activate.ps1
+
+# 3. Upgrade pip & install requirements
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+
+# 4. Copy environment configuration template
+Copy-Item .env.example .env
 ```
 
-and installs the Python requirements.
+---
 
-Alternatively, do it manually:
+### Step 3.3: Configure Local `.env` File
+In VS Code, open `.env` from the file explorer and set your **EC2 Public IP** and **Groq API Key**:
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-cp .env.example .env
-```
+```env
+# EC2 Remote PostgreSQL Connection:
+DATABASE_URL=postgresql://rag_user:rag_password@<YOUR_EC2_PUBLIC_IP>:5432/ragdb
 
-# 5. Configure Groq
+# Groq API Credentials:
+GROQ_API_KEY=gsk_your_actual_groq_api_key_here
 
-Edit:
-
-```bash
-nano .env
-```
-
-Set:
-
-```text
-DATABASE_URL=postgresql://rag_user:rag_password@localhost:5432/ragdb
-GROQ_API_KEY=YOUR_GROQ_API_KEY
-LLM_MODEL=llama-3.3-70b-versatile
+# Model & Chunking Parameters:
+LLM_MODEL=qwen/qwen3.6-27b
 EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 CHUNK_SIZE=800
 CHUNK_OVERLAP=120
 TOP_K=5
 ```
 
-Never commit `.env`.
+### Step 3.4: Initialize Database Schema
+In the activated VS Code PowerShell terminal (`.venv`), run:
 
-# 6. Initialize the RAG schema
-
-```bash
-source .venv/bin/activate
+```powershell
 python scripts/init_db.py
 ```
+*Creates `documents` table and `document_chunks` table with `VECTOR(384)` embedding column on your EC2 PostgreSQL database.*
 
-The application creates:
+---
 
-```text
-documents
-document_chunks
-```
+### Step 3.5: Generate 100 Sample Documents
+To generate test document files in `data/documents/`:
 
-The vector column is:
-
-```sql
-embedding VECTOR(384)
-```
-
-The `384` matches:
-
-```text
-sentence-transformers/all-MiniLM-L6-v2
-```
-
-# 7. Generate 100 sample documents
-
-If you do not have documents yet:
-
-```bash
+```powershell
 python scripts/generate_sample_docs.py
 ```
+*(You can also place your own `.pdf`, `.docx`, `.txt`, or `.md` files in `data/documents/`).*
 
-This creates 100 synthetic TXT files under:
+---
 
-```text
-data/documents/
-```
+### Step 3.6: Ingest Documents into EC2 Vector Database
+Process, chunk, embed, and store document vectors into EC2 PostgreSQL:
 
-You can delete these and place your own:
-
-- PDF
-- DOCX
-- TXT
-- Markdown
-
-files there.
-
-# 8. Ingest documents
-
-```bash
+```powershell
 python scripts/ingest_documents.py
 ```
 
-Pipeline:
-
+*Pipeline summary:*
 ```text
-document
-  |
-  v
-text extraction
-  |
-  v
-clean text
-  |
-  v
-chunks
-  |
-  v
-embeddings
-  |
-  v
-PostgreSQL
+Document Extraction -> Text Cleaning -> Chunking -> Embedding -> EC2 PostgreSQL
+```
+*(Duplicate documents are automatically skipped using SHA-256 hashes).*
+
+---
+
+### Step 3.7: Verify Ingested Data in PostgreSQL
+Connect remotely using `psql` from VS Code PowerShell:
+
+```powershell
+psql -U rag_user -d ragdb -h <YOUR_EC2_PUBLIC_IP>
 ```
 
-Duplicate documents are detected using a SHA-256 content hash.
-
-# 9. Check the database
-
-```bash
-psql -U rag_user -d ragdb -h localhost
-```
-
-Run:
-
+Run SQL queries:
 ```sql
 SELECT COUNT(*) FROM documents;
-```
-
-```sql
 SELECT COUNT(*) FROM document_chunks;
-```
 
-```sql
 SELECT
     d.filename,
     c.chunk_index,
@@ -286,204 +276,71 @@ FROM document_chunks c
 JOIN documents d
   ON d.document_id = c.document_id
 LIMIT 10;
+
+\q
 ```
 
-# 10. Run the RAG application
+---
 
-```bash
-python main.py
+### Step 3.8: Launch Streamlit Web UI Dashboard
+Launch the interactive Streamlit Web UI:
+
+```powershell
+streamlit run main.py
 ```
+*(Or simply run `python main.py` in VS Code terminal, which automatically launches the Streamlit Web Dashboard in your browser).*
 
-Example:
+#### Web Dashboard Features:
+- 💬 **Interactive RAG Chat Assistant**: Ask questions with full conversation history, view retrieved context chunks with similarity scores, and test sample questions.
+- 📚 **Document Management & Ingestion**: Drag-and-drop file upload (`.txt`, `.pdf`, `.docx`, `.md`), trigger ingestion directly from the UI, and view database records.
+- 🔍 **pgvector Search Explorer**: Test raw vector similarity retrieval directly from EC2 PostgreSQL without calling the LLM.
+- 🛠️ **Live System Status**: Real-time PostgreSQL EC2 connection indicator, total document & vector chunk counters, and architecture reference.
 
-```text
-RAG Assistant
-Type 'exit' to quit.
+*(Note: To run in terminal CLI mode instead, use `python main.py --cli`).*
 
-Ask a question: What is PostgreSQL VACUUM used for?
-```
+---
 
-The application:
-
-```text
-Question
-   |
-   v
-Embedding
-   |
-   v
-pgvector search
-   |
-   v
-Top-K chunks
-   |
-   v
-Context construction
-   |
-   v
-Groq LLM
-   |
-   v
-Answer + source filenames
-```
-
-# 11. Why pgvector is not indexed initially
-
-The prototype contains approximately 100 documents.
-
-For this size, exact nearest-neighbor search is sufficient and easier to understand.
-
-When the chunk count becomes substantially larger, an HNSW index can be added:
-
-```sql
-CREATE INDEX idx_document_chunks_embedding_hnsw
-ON document_chunks
-USING hnsw (embedding vector_cosine_ops);
-```
-
-# 12. Important pgvector query
-
-Retrieval uses cosine distance:
-
-```sql
-ORDER BY c.embedding <=> %s::vector
-LIMIT %s
-```
-
-The application converts distance into a similarity-style score:
-
-```sql
-1 - (c.embedding <=> %s::vector)
-```
-
-# 13. Project structure
+# Project Structure
 
 ```text
 rag_pgvector_groq/
-|
-âââ app/
-â   âââ config.py
-â   âââ database.py
-â   âââ document_loader.py
-â   âââ embeddings.py
-â   âââ groq_client.py
-â   âââ prompt_builder.py
-â   âââ rag_pipeline.py
-â   âââ retriever.py
-â   âââ text_splitter.py
-â   âââ vector_store.py
-|
-âââ data/
-â   âââ documents/
-|
-âââ scripts/
-â   âââ bootstrap.sh
-â   âââ generate_sample_docs.py
-â   âââ ingest_documents.py
-â   âââ init_db.py
-â   âââ setup_ubuntu_pgvector.sh
-|
-âââ tests/
-âââ .env.example
-âââ requirements.txt
-âââ main.py
-âââ ARCHITECTURE.md
-âââ README.md
+├── app/
+│   ├── config.py             # Loads environment variables from .env
+│   ├── database.py           # PostgreSQL connection pool (psycopg2)
+│   ├── document_loader.py    # Text, PDF, DOCX, MD loader
+│   ├── embeddings.py         # SentenceTransformers embedding engine
+│   ├── groq_client.py        # Groq LLM API integration
+│   ├── prompt_builder.py     # Grounded context prompt constructor
+│   ├── rag_pipeline.py       # End-to-end RAG orchestrator
+│   ├── retriever.py          # Vector retrieval logic
+│   ├── text_splitter.py      # Overlapping text chunker
+│   └── vector_store.py       # pgvector similarity search queries
+├── data/
+│   └── documents/            # Target folder for ingested documents
+├── scripts/
+│   ├── bootstrap.ps1         # PowerShell bootstrap script for Windows
+│   ├── bootstrap.sh          # Bash bootstrap script for Linux/macOS
+│   ├── generate_sample_docs.py # Generates 100 synthetic text docs
+│   ├── ingest_documents.py   # Document ingestion CLI
+│   ├── init_db.py            # Database schema setup script
+│   └── setup_ubuntu_pgvector.sh # EC2 pgvector setup script
+├── .env.example              # Environment variables template
+├── requirements.txt          # Python dependencies
+├── main.py                   # Interactive RAG CLI
+├── ARCHITECTURE.md           # Technical architecture documentation
+└── README.md                 # Master documentation & step-by-step guide
 ```
 
-# 14. What each major component does
+---
 
-### document_loader.py
+# Component Summary
 
-Extracts text from supported files.
-
-### text_splitter.py
-
-Breaks large documents into smaller overlapping chunks.
-
-### embeddings.py
-
-Converts chunks and questions into numerical vectors.
-
-### vector_store.py
-
-Stores vectors in PostgreSQL and performs similarity search.
-
-### retriever.py
-
-Connects question embedding to vector search.
-
-### prompt_builder.py
-
-Creates grounded context and the RAG prompt.
-
-### groq_client.py
-
-Calls the Groq-hosted LLM.
-
-### rag_pipeline.py
-
-Orchestrates the entire RAG process.
-
-### main.py
-
-Provides the interactive CLI.
-
-# 15. Prototype limitations
-
-This version intentionally does not include:
-
-- authentication
-- multi-tenancy
-- hybrid search
-- reranking
-- conversation memory
-- query rewriting
-- distributed ingestion
-- queues
-- caching
-- enterprise observability
-- Kubernetes
-
-Those should be added only after the core RAG pipeline is understood.
-
-# 16. Next evolution
-
-Recommended order:
-
-```text
-Basic RAG
-   |
-   v
-HNSW
-   |
-   v
-Metadata filtering
-   |
-   v
-Hybrid search
-   |
-   v
-Reranking
-   |
-   v
-RAG evaluation
-   |
-   v
-FastAPI
-   |
-   v
-Streamlit
-   |
-   v
-Conversation memory
-   |
-   v
-Query rewriting
-   |
-   v
-Multi-query RAG
-   |
-   v
-Agentic RAG
-```
+* **`document_loader.py`**: Extracts text from `.txt`, `.pdf`, `.docx`, `.md`.
+* **`text_splitter.py`**: Splits text into sliding window chunks (`800` chars, `120` overlap).
+* **`embeddings.py`**: Generates 384-dimensional vector embeddings via `sentence-transformers/all-MiniLM-L6-v2`.
+* **`vector_store.py`**: Executes cosine distance similarity searches (`<=>`) in EC2 PostgreSQL.
+* **`retriever.py`**: Fetches top-K relevant text chunks for a query.
+* **`prompt_builder.py`**: Wraps retrieved context into a grounded prompt for LLM generation.
+* **`groq_client.py`**: Queries Groq API with `llama-3.3-70b-versatile`.
+* **`rag_pipeline.py`**: Connects retriever, prompt builder, and Groq client.
+* **`main.py`**: Interactive VS Code terminal interface.
