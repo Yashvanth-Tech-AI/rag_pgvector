@@ -57,7 +57,6 @@ def main() -> None:
                 f"chunk={source['chunk_index']} | "
                 f"similarity={source['similarity']:.4f}"
             )
-
         print()
 
 
