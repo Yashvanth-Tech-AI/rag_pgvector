@@ -91,6 +91,10 @@ class VectorStore:
 
         return True
 
+    def search(self, query_embedding: list[float], top_k: int) -> list[dict]:
+        """Alias for similarity_search."""
+        return self.similarity_search(query_embedding, top_k)
+
     def similarity_search(
         self,
         query_embedding: list[float],

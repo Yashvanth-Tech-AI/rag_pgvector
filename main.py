@@ -389,8 +389,8 @@ def run_streamlit_app():
                         embeddings = EmbeddingService(settings.embedding_model)
                         vector_store = VectorStore(database)
 
-                        query_vec = embeddings.embed_query(query_text)
-                        results = vector_store.search(query_vec, top_k=top_k_val)
+                        query_vec = embeddings.embed_text(query_text)
+                        results = vector_store.similarity_search(query_vec, top_k=top_k_val)
 
                         if results:
                             st.success(f"Found {len(results)} matching chunks.")
