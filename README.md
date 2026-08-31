@@ -56,24 +56,29 @@ Generated Answer + Source References
 
 SSH into your Ubuntu EC2 instance and run the following commands to install PostgreSQL 16 and the `pgvector` extension.
 
-### Step 1.1: Install PostgreSQL 16 and Prerequisites
+### Step 1.1: Install System Prerequisites
+
+> [!NOTE]
+> This step installs only the required system tools (Python, Git, curl, etc.).
+> **PostgreSQL 16 itself is installed in Step 1.2** — do not add `postgresql` here to avoid duplicate installs.
+
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-pip git curl ca-certificates postgresql postgresql-contrib
+sudo apt install -y python3 python3-pip git curl ca-certificates
 ```
 
-### Step 1.2: Install pgvector Extension
-Choose one of the following methods to install `pgvector`:
+### Step 1.2: Install PostgreSQL 16 + pgvector Extension
+Choose **one** of the following methods. Each method installs both PostgreSQL 16 and the `pgvector` extension:
 
 ```bash
-# Option A: Automated script
+# Option A: Automated script (Recommended — installs PostgreSQL 16 + pgvector in one step)
 chmod +x scripts/setup_ubuntu_pgvector.sh
 ./scripts/setup_ubuntu_pgvector.sh
 
-# Option B: Direct APT installation
+# Option B: Manual APT installation (if PostgreSQL 16 is already installed, just adds pgvector)
 sudo apt install -y postgresql-16-pgvector
 
-# Option C: Build and install from GitHub source repository
+# Option C: Build pgvector from source (use if APT package is unavailable)
 sudo apt install -y build-essential postgresql-server-dev-16
 cd /tmp
 git clone https://github.com/pgvector/pgvector.git
@@ -81,6 +86,9 @@ cd pgvector
 make
 sudo make install
 ```
+
+> [!TIP]
+> **Option A** is the recommended path — it handles the full PostgreSQL 16 + pgvector install automatically and validates your environment. Use Option B or C only if you already have PostgreSQL 16 installed.
 
 ---
 
@@ -133,7 +141,14 @@ sudo ufw allow 5432/tcp
 sudo systemctl restart postgresql
 ```
 
-### Step 2.5: Create Database, User, and Vector Extension on EC2
+### Step 2.5: Create Database, User, and Enable Vector Extension on EC2
+
+> [!IMPORTANT]
+> **This is a one-time EC2 server setup step.** Run these SQL commands directly on your EC2 instance as the `postgres` superuser.
+> This creates the database and user that your application will connect to.
+>
+> ⚠️ **Do not confuse this with Step 3.4** (`python scripts/init_db.py`) — that step runs **on your local Windows machine** and creates the application *tables* (`documents`, `document_chunks`) inside the database you create here.
+
 Log in to PostgreSQL as `postgres` superuser on EC2:
 
 ```bash
@@ -151,15 +166,18 @@ CREATE DATABASE ragdb OWNER rag_user;
 -- Connect to ragdb database
 \c ragdb
 
--- Enable vector extension
+-- Enable vector extension (required for pgvector similarity search)
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Verify vector extension installation
+-- Verify vector extension is active
 \dx
 
 -- Exit psql
 \q
 ```
+
+> [!NOTE]
+> After completing this step, your EC2 PostgreSQL server is fully configured. Switch to your **local Windows machine** for Part 3 to set up the Python application and create the schema tables.
 
 ---
 
